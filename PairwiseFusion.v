@@ -34,15 +34,15 @@ Definition children (t : Tree) : list Tree :=
   end.
 
 (* Apply a tree transformation recursively, with a postorder traversal *)
-Fixpoint apply (f : Tree -> Tree) (t : Tree) : Tree :=
+Fixpoint transform (f : Tree -> Tree) (t : Tree) : Tree :=
   match t with
     | Leaf y     => f (Leaf y)
-    | Node x L R => f (Node x (apply f L) (apply f R))
+    | Node x L R => f (Node x (transform f L) (transform f R))
   end.
 
 (* Apply two tree transformations in the same traversal *)
-Definition applyFused (f1 f2 : Tree -> Tree) (t : Tree) : Tree :=
-  apply (compose f2 f1) t.
+Definition fused (f1 f2 : Tree -> Tree) (t : Tree) : Tree :=
+  transform (compose f2 f1) t.
 
 (******************************************************************************)
 (* Postconditions                                                             *)
@@ -75,7 +75,7 @@ Definition FC2 (f1 : Tree -> Tree) (p2 : Tree -> Prop) : Prop :=
 
 (* Subject to FC1, the first postcondition will be preserved *)
 Lemma L1: forall (f1 f2 : Tree -> Tree) (p1 : Tree -> Prop) (t : Tree),
-  satisfies f1 p1 -> FC1 f2 p1 -> check p1 (applyFused f1 f2 t).
+  satisfies f1 p1 -> FC1 f2 p1 -> check p1 (fused f1 f2 t).
 Proof.
   intros.
   induction t; apply H0; apply H; simpl; auto.
@@ -83,7 +83,7 @@ Qed.
 
 (* Subject to FC2, the second postcondition will be preserved *)
 Lemma L2: forall (f1 f2 : Tree -> Tree) (p2 : Tree -> Prop) (t : Tree),
-  satisfies f2 p2 -> FC2 f1 p2 -> check p2 (applyFused f1 f2 t).
+  satisfies f2 p2 -> FC2 f1 p2 -> check p2 (fused f1 f2 t).
 Proof.
   intros.
   induction t; apply H; apply H0; simpl; auto.
@@ -94,7 +94,7 @@ Qed.
 Theorem successfulFusion:
   forall (f1 f2 : Tree -> Tree) (p1 p2 : Tree -> Prop) (t : Tree),
     satisfies f1 p1 -> satisfies f2 p2 -> FC1 f2 p1 -> FC2 f1 p2
-      -> check p1 (applyFused f1 f2 t) /\ check p2 (applyFused f1 f2 t).
+      -> check p1 (fused f1 f2 t) /\ check p2 (fused f1 f2 t).
 Proof.
   intros.
   split.
