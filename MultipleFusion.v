@@ -1,3 +1,4 @@
+
 (******************************************************************************)
 (*     Postcondition-Preserving Fusion of Postorder Tree Transformations      *)
 (*                                                                            *)
@@ -34,22 +35,22 @@ Definition children (t : Tree) : list Tree :=
   end.
 
 (* Apply a tree transformation recursively, with a postorder traversal *)
-Fixpoint apply (f : Tree -> Tree) (t : Tree) : Tree :=
+Fixpoint transform (f : Tree -> Tree) (t : Tree) : Tree :=
   match t with
     | Leaf y     => f (Leaf y)
-    | Node x L R => f (Node x (apply f L) (apply f R))
+    | Node x L R => f (Node x (transform f L) (transform f R))
   end.
 
 (* Compose a list of tree transformations *)
-Fixpoint composeList (fs : list (Tree -> Tree)) : Tree -> Tree :=
+Fixpoint compose_list (fs : list (Tree -> Tree)) : Tree -> Tree :=
     match fs with
       | [ ]        => fun t : Tree => t
-      | cons f fs' => fun t : Tree => compose (composeList fs') f t
+      | cons f fs' => fun t : Tree => compose (compose_list fs') f t
     end.
 
 (* Apply two tree transformations in the same traversal *)
-Definition applyFused (fs : list (Tree -> Tree)) (t : Tree) : Tree :=
-  apply (composeList fs) t.
+Definition fused_list (fs : list (Tree -> Tree)) (t : Tree) : Tree :=
+  transform (compose_list fs) t.
 
 (******************************************************************************)
 (* Postconditions                                                             *)
@@ -88,7 +89,7 @@ Definition beforeFC2 (p : Tree -> Prop) (fs : list (Tree -> Tree)) : Prop :=
 
 Lemma unrollComposeList : forall
   (xs ys : list (Tree -> Tree)) (t : Tree),
-    composeList (xs ++ ys) t = (composeList ys) ((composeList xs) t).
+    compose_list (xs ++ ys) t = (compose_list ys) ((compose_list xs) t).
 Proof.
   intros until xs.
   induction xs.
@@ -98,7 +99,7 @@ Qed.
 
 Lemma afterFC1Preserves: forall (fs : list (Tree -> Tree))
   (p : Tree -> Prop) (t : Tree),
-    check p t -> afterFC1 p fs -> check p (composeList (rev fs) t).
+    check p t -> afterFC1 p fs -> check p (compose_list (rev fs) t).
 Proof.
   intros until p.
   induction fs.
@@ -115,7 +116,7 @@ Qed.
 Lemma lemAfter:
   forall (after : list (Tree -> Tree)) (f : Tree -> Tree) (p : Tree -> Prop),
     afterFC1 p after -> satisfies f p
-      -> forall (t : Tree), check p (applyFused (cons f (rev after)) t).
+      -> forall (t : Tree), check p (fused_list (cons f (rev after)) t).
 Proof.
   intros until f.
   intro.
@@ -123,8 +124,8 @@ Proof.
   induction after.
   { induction t; apply H0; simpl; auto. }
   { induction t.
-    { unfold applyFused.
-      unfold apply.
+    { unfold fused_list.
+      unfold transform.
       simpl.
       unfold compose.
       rewrite unrollComposeList.
@@ -132,9 +133,9 @@ Proof.
       apply H1.
       apply IHafter with (t := Leaf y); auto.
     }
-    { unfold applyFused.
-      unfold apply.
-      fold apply.
+    { unfold fused_list.
+      unfold transform.
+      fold transform.
       simpl.
       unfold compose.
       rewrite unrollComposeList.
@@ -151,7 +152,7 @@ Qed.
 Lemma beforeFC2Preserves: forall (fs : list (Tree -> Tree))
   (p : Tree -> Prop) (t : Tree),
     Forall (check p) (children t) -> beforeFC2 p fs 
-      -> Forall (check p) (children (composeList fs t)).
+      -> Forall (check p) (children (compose_list fs t)).
 Proof.
   intros until p.
   induction fs.
@@ -168,15 +169,15 @@ Lemma successfulMultiFusion : forall (before : list (Tree -> Tree))
   (f : Tree -> Tree) (after : list (Tree -> Tree))
   (p : Tree -> Prop) (t : Tree),
     beforeFC2 p before -> afterFC1 p after -> satisfies f p
-      -> check p (applyFused (before ++ [f] ++ (rev after)) t).
+      -> check p (fused_list (before ++ [f] ++ (rev after)) t).
 Proof.
   intros until after.
   induction before.
   { intros. apply lemAfter; auto. }
   { intros.
-    unfold applyFused.
+    unfold fused_list.
     induction t.
-    { unfold apply.
+    { unfold transform.
       rewrite 2 unrollComposeList.
       simpl.
       unfold compose.
@@ -188,8 +189,8 @@ Proof.
       simpl.
       auto.
     }
-    { unfold apply.
-      fold apply.
+    { unfold transform.
+      fold transform.
       rewrite 2 unrollComposeList.
       simpl.
       unfold compose.
@@ -203,5 +204,3 @@ Proof.
     }
   }
 Qed.
-
-
